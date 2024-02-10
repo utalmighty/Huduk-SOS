@@ -11,6 +11,7 @@
 - Hash range partition
 - Use of streams (if file is large)
 - Consistent hashing
+- We will use indexing since we can bear penality on writes instead of reads.
 
 ### No-SQL
 - Unstructured data
@@ -18,6 +19,7 @@
 - Dont need ACID properties
 - Dont need Isolation since data is immutable
 - No relation
+- No range query to be performed
 - Each object is simple, self-contained repository that includes the data, metadata.
 - Replication: gonna use eventual consistency.
 - Single-Leader Replication since write are less.
