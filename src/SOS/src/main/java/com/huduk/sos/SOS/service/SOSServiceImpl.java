@@ -10,24 +10,32 @@ import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.huduk.sos.SOS.entity.SOS;
+import com.huduk.sos.SOS.exception.SOSException;
 import com.huduk.sos.SOS.repository.SOSRepository;
 
 @Service
 @Transactional
 public class SOSServiceImpl implements SOSService{
 
-    @Autowired
     private SOSRepository repository;
 
-    @Autowired
     private Environment environment;
 
-    private Random random = new Random();
+    private Random random;
+
+    public SOSServiceImpl(SOSRepository repository, Environment environment) {
+        this.repository = repository;
+        this.environment = environment;
+        this.random = new Random();
+    }
 
     @Override
     public String save(MultipartFile file) throws IOException {
@@ -79,9 +87,16 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public MultipartFile fetch(String assetId) throws IOException {
-        // TODO Auto-generated method stub
-        return null;
+    public Resource fetch(String assetId) throws IOException {
+        SOS entity = repository.findById(assetId)
+                    .orElseThrow(()-> new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND));
+        String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
+        Path path = Path.of(fullFilePath);
+        Resource file = new UrlResource(path.toUri());
+        if (file.exists() || file.isReadable())
+            return file;
+		else
+			throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
     }
     
 }
