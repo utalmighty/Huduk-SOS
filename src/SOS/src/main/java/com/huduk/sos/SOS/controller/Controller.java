@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequestMapping("huduk/sos")
 public class Controller {
 
-    private SOSService service;
+    private final SOSService service;
 
     public Controller(SOSService service) {
         this.service = service;

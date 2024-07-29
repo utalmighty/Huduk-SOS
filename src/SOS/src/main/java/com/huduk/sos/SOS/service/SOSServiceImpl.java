@@ -25,11 +25,11 @@ import com.huduk.sos.SOS.repository.SOSRepository;
 @Transactional
 public class SOSServiceImpl implements SOSService{
 
-    private SOSRepository repository;
+    private final SOSRepository repository;
 
-    private Environment environment;
+    private final Environment environment;
 
-    private Random random;
+    private final Random random;
 
     public SOSServiceImpl(SOSRepository repository, Environment environment) {
         this.repository = repository;

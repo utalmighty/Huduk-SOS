@@ -15,7 +15,7 @@ import com.huduk.sos.SOS.exception.SOSException;
 @RestControllerAdvice
 public class ExceptionController {
 
-    private Environment environment;
+    private final Environment environment;
 
     public ExceptionController(Environment environment) {
         this.environment = environment;

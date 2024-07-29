@@ -2,8 +2,11 @@ package com.huduk.sos.SOS.exception;
 
 import org.springframework.http.HttpStatus;
 
+import java.io.Serial;
+
 public class SOSException extends RuntimeException{
 
+    @Serial
     private static final long serialVersionUID = 7355608L;
     private final String message;
     private final HttpStatus status;
