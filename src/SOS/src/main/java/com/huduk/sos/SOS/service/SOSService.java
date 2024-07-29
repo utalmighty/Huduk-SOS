@@ -8,6 +8,6 @@ import reactor.core.publisher.Mono;
 
 public interface SOSService {
     
-    public Mono<String> save(MultipartFile file) throws IOException;
-    public Mono<Resource> fetch(String assetId) throws IOException;
+    Mono<String> save(MultipartFile file) throws IOException;
+    Mono<Resource> fetch(String assetId) throws IOException;
 }
