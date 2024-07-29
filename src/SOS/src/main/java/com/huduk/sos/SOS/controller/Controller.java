@@ -31,15 +31,14 @@ public class Controller {
     }
 
     @PostMapping()
-    public ResponseEntity<String> save(@RequestPart("file") MultipartFile file) throws IOException {
-        return new ResponseEntity<>(service.save(file), HttpStatus.CREATED);
+    public Publisher<ResponseEntity<String>> save(@RequestPart("file") MultipartFile file) throws IOException {
+        return service.save(file).map(key-> new ResponseEntity<>(key, HttpStatus.CREATED));
     }
 
     @GetMapping("{assetId}")
-    public ResponseEntity<Resource> fetch(@PathVariable String assetId) throws IOException {
-        Resource file = service.fetch(assetId);
-        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
-        "attachment; filename=\"" + file.getFilename() + "\"").body(file);
+    public Publisher<ResponseEntity<Resource>> fetch(@PathVariable String assetId) throws IOException {
+        return service.fetch(assetId).map(file-> ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
+        "attachment; filename=\"" + file.getFilename() + "\"").body(file));
     }
     
 }

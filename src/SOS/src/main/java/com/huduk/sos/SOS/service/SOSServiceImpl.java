@@ -38,7 +38,7 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public String save(MultipartFile file) throws IOException {
+    public Mono<String> save(MultipartFile file) throws IOException {
         String fileName = file.getOriginalFilename();
         String path = environment.getProperty("storage.path") + fileName;
         
@@ -56,23 +56,22 @@ public class SOSServiceImpl implements SOSService{
         os.close();
         is.close();
 
-        SOS entity = new SOS();
-        entity.setId(generateId());
+        return generateId().flatMap(id -> {
+             SOS entity = new SOS();
+        entity.setId(id);
         entity.setFileName(fileName);
         entity.setLocation(path);
         entity.setLastUsedOn(LocalDate.now());
 
-        repository.save(entity);
-
-        return entity.getId();
+        return repository.save(entity);
+        }).map(SOS::getId);
     }
 
-    private String generateId() {
+    private Mono<String> generateId() {
         int size = 7;
         String id = generateRandom(size);
-        while (repository.existsById(id))
-            id = generateRandom(size);
-        return id;
+        return repository.existsById(id)
+            .flatMap(exists-> Boolean.TRUE.equals(exists) ? generateId() : Mono.just(id));
     }
 
     private String generateRandom(int size) {
@@ -87,14 +86,14 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public Resource fetch(String assetId) throws IOException {
+    public Mono<Resource> fetch(String assetId) throws IOException {
         SOS entity = repository.findById(assetId)
                     .orElseThrow(()-> new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND));
         String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
         Path path = Path.of(fullFilePath);
         Resource file = new UrlResource(path.toUri());
         if (file.exists() || file.isReadable())
-            return file;
+            return Mono.just(file);
 		else
 			throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
     }

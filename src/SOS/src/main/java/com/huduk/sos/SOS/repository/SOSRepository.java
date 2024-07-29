@@ -1,9 +1,9 @@
 package com.huduk.sos.SOS.repository;
 
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.ReactiveMongoRepositoryMongoRepository;
 
 import com.huduk.sos.SOS.entity.SOS;
 
-public interface SOSRepository extends MongoRepository<SOS, String>{
+public interface SOSRepository extends ReactiveMongoRepository<SOS, String>{
     
 }
