@@ -3,6 +3,7 @@ package com.huduk.sos.SOS.service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -87,16 +88,25 @@ public class SOSServiceImpl implements SOSService{
 
     @Override
     public Mono<Resource> fetch(String assetId) throws IOException {
-        SOS entity = repository.findById(assetId).block();
-                    // TODO Throw Exception
-                    // .orElseThrow(()-> new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND));
-        String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
-        Path path = Path.of(fullFilePath);
-        Resource file = new UrlResource(path.toUri());
-        if (file.exists() || file.isReadable())
-            return Mono.just(file);
-		else
-			throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
+        return repository.findById(assetId)
+            .switchIfEmpty(Mono.error(new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND)))
+            .map(entity-> {
+                String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
+                Path path = Path.of(fullFilePath);
+                
+                Resource file = null;
+                try {
+                    file = new UrlResource(path.toUri());
+                } catch (MalformedURLException e) {
+                    // TODO Refactor this
+                    throw new RuntimeException(e);
+                }
+                if (file.exists() || file.isReadable())
+                    return Mono.just(file);
+		        else
+			        throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
+        });
+        
     }
     
 }
