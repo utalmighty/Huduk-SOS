@@ -30,12 +30,12 @@ public class Controller {
     }
 
     @PostMapping()
-    public Publisher<ResponseEntity<String>> save(@RequestPart("file") FilePart file) throws IOException {
+    public Publisher<ResponseEntity<String>> save(@RequestPart("file") FilePart file) {
         return service.save(file).map(key-> new ResponseEntity<>(key, HttpStatus.CREATED));
     }
 
     @GetMapping("{assetId}")
-    public Publisher<ResponseEntity<Resource>> fetch(@PathVariable String assetId) throws IOException {
+    public Publisher<ResponseEntity<Resource>> fetch(@PathVariable String assetId) {
         return service.fetch(assetId).map(file-> ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
         "attachment; filename=\"" + file.getFilename() + "\"").body(file));
     }
