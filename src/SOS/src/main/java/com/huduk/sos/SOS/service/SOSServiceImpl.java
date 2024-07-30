@@ -1,21 +1,19 @@
 package com.huduk.sos.SOS.service;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
+import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Random;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.codec.multipart.FilePart;
+import reactor.core.publisher.Mono;
 
 import com.huduk.sos.SOS.entity.SOS;
 import com.huduk.sos.SOS.exception.SOSException;
@@ -25,11 +23,11 @@ import com.huduk.sos.SOS.repository.SOSRepository;
 @Transactional
 public class SOSServiceImpl implements SOSService{
 
-    private SOSRepository repository;
+    private final SOSRepository repository;
 
-    private Environment environment;
+    private final Environment environment;
 
-    private Random random;
+    private final Random random;
 
     public SOSServiceImpl(SOSRepository repository, Environment environment) {
         this.repository = repository;
@@ -38,41 +36,27 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public String save(MultipartFile file) throws IOException {
-        String fileName = file.getOriginalFilename();
+    public Mono<String> save(FilePart file) {
+        String fileName = file.filename();
         String path = environment.getProperty("storage.path") + fileName;
         
-        InputStream is = file.getInputStream();
-
-        OutputStream os = Files.newOutputStream(Path.of(path));
-        
-        long len = is.available();
-        int megaByte = 1024 * 1024;
-		for (int i = 0; i < len / megaByte; i++) {
-			os.write(is.readNBytes(megaByte));
-		}
-		os.write(is.readNBytes((int) len % megaByte));
-
-        os.close();
-        is.close();
-
-        SOS entity = new SOS();
-        entity.setId(generateId());
-        entity.setFileName(fileName);
-        entity.setLocation(path);
-        entity.setLastUsedOn(LocalDate.now());
-
-        repository.save(entity);
-
-        return entity.getId();
+        return file.transferTo(Path.of(path))
+            .then(generateId().flatMap(id -> {
+                    SOS entity = new SOS();
+                    entity.setId(id);
+                    entity.setFileName(fileName);
+                    entity.setLocation(path);
+                    entity.setLastUsedOn(LocalDate.now());
+                    return repository.save(entity);
+        }).map(SOS::getId))
+        .onErrorResume(err-> Mono.error(new IOException()));
     }
 
-    private String generateId() {
+    private Mono<String> generateId() {
         int size = 7;
         String id = generateRandom(size);
-        while (repository.existsById(id))
-            id = generateRandom(size);
-        return id;
+        return repository.existsById(id)
+            .flatMap(exists-> Boolean.TRUE.equals(exists) ? generateId() : Mono.just(id));
     }
 
     private String generateRandom(int size) {
@@ -87,16 +71,26 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public Resource fetch(String assetId) throws IOException {
-        SOS entity = repository.findById(assetId)
-                    .orElseThrow(()-> new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND));
-        String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
-        Path path = Path.of(fullFilePath);
-        Resource file = new UrlResource(path.toUri());
-        if (file.exists() || file.isReadable())
-            return file;
-		else
-			throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
+    public Mono<Resource> fetch(String assetId) {
+        return repository.findById(assetId)
+            .switchIfEmpty(Mono.error(new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND)))
+            .map(entity-> {
+                String fullFilePath = entity.getLocation();
+                Path path = Path.of(fullFilePath);
+                
+                Resource file = null;
+                try {
+                    file = new UrlResource(path.toUri());
+                } catch (MalformedURLException e) {
+                    // TODO Refactor this
+                    throw new RuntimeException(e);
+                }
+                if (file.exists() || file.isReadable())
+                    return file;
+		        else
+			        throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
+        });
+        
     }
     
 }

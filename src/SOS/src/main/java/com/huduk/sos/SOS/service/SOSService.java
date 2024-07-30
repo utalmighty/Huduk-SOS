@@ -1,12 +1,11 @@
 package com.huduk.sos.SOS.service;
 
-import java.io.IOException;
-
 import org.springframework.core.io.Resource;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.codec.multipart.FilePart;
+import reactor.core.publisher.Mono;
 
 public interface SOSService {
     
-    public String save(MultipartFile file) throws IOException;
-    public Resource fetch(String assetId) throws IOException;
+    Mono<String> save(FilePart file);
+    Mono<Resource> fetch(String assetId);
 }

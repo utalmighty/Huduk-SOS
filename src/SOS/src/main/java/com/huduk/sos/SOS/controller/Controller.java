@@ -1,16 +1,13 @@
 package com.huduk.sos.SOS.controller;
 
+import org.reactivestreams.Publisher;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
-import com.huduk.sos.SOS.SosApplication;
 import com.huduk.sos.SOS.service.SOSService;
 
-import java.io.IOException;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,22 +21,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequestMapping("huduk/sos")
 public class Controller {
 
-    private SOSService service;
+    private final SOSService service;
 
     public Controller(SOSService service) {
         this.service = service;
     }
 
     @PostMapping()
-    public ResponseEntity<String> save(@RequestPart("file") MultipartFile file) throws IOException {
-        return new ResponseEntity<>(service.save(file), HttpStatus.CREATED);
+    public Publisher<ResponseEntity<String>> save(@RequestPart("file") FilePart file) {
+        return service.save(file).map(key-> new ResponseEntity<>(key, HttpStatus.CREATED));
     }
 
     @GetMapping("{assetId}")
-    public ResponseEntity<Resource> fetch(@PathVariable String assetId) throws IOException {
-        Resource file = service.fetch(assetId);
-        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
-        "attachment; filename=\"" + file.getFilename() + "\"").body(file);
+    public Publisher<ResponseEntity<Resource>> fetch(@PathVariable String assetId) {
+        return service.fetch(assetId).map(file-> ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
+        "attachment; filename=\"" + file.getFilename() + "\"").body(file));
     }
     
 }

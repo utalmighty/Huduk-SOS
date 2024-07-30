@@ -2,7 +2,6 @@ package com.huduk.sos.SOS.utility;
 
 import java.io.IOException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +14,7 @@ import com.huduk.sos.SOS.exception.SOSException;
 @RestControllerAdvice
 public class ExceptionController {
 
-    private Environment environment;
+    private final Environment environment;
 
     public ExceptionController(Environment environment) {
         this.environment = environment;
