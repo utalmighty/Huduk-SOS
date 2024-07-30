@@ -1,2 +1,2 @@
 # Huduk SOS
-Simple Object Storage
+Self-hosted, non-blocking Simple Object Storage.
