@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.huduk.sos.SOS.service.SOSService;
 
-import java.io.IOException;
-
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
