@@ -1,10 +1,10 @@
 package com.huduk.sos.SOS.controller;
 
 import org.reactivestreams.Publisher;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.huduk.sos.SOS.service.SOSService;
 
@@ -30,7 +30,7 @@ public class Controller {
     }
 
     @PostMapping()
-    public Publisher<ResponseEntity<String>> save(@RequestPart("file") MultipartFile file) throws IOException {
+    public Publisher<ResponseEntity<String>> save(@RequestPart("file") FilePart file) throws IOException {
         return service.save(file).map(key-> new ResponseEntity<>(key, HttpStatus.CREATED));
     }
 

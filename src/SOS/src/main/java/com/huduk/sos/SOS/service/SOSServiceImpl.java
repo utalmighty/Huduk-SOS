@@ -15,7 +15,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.codec.multipart.FilePart;
 import reactor.core.publisher.Mono;
 
 import com.huduk.sos.SOS.entity.SOS;
@@ -39,33 +39,20 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public Mono<String> save(MultipartFile file) throws IOException {
-        String fileName = file.getOriginalFilename();
+    public Mono<String> save(FilePart file) {
+        String fileName = file.filename();
         String path = environment.getProperty("storage.path") + fileName;
         
-        InputStream is = file.getInputStream();
-
-        OutputStream os = Files.newOutputStream(Path.of(path));
-        
-        long len = is.available();
-        int megaByte = 1024 * 1024;
-		for (int i = 0; i < len / megaByte; i++) {
-			os.write(is.readNBytes(megaByte));
-		}
-		os.write(is.readNBytes((int) len % megaByte));
-
-        os.close();
-        is.close();
-
-        return generateId().flatMap(id -> {
-             SOS entity = new SOS();
-        entity.setId(id);
-        entity.setFileName(fileName);
-        entity.setLocation(path);
-        entity.setLastUsedOn(LocalDate.now());
-
-        return repository.save(entity);
-        }).map(SOS::getId);
+        return file.transferTo(Path.of(path))
+            .then(generateId().flatMap(id -> {
+                    SOS entity = new SOS();
+                    entity.setId(id);
+                    entity.setFileName(fileName);
+                    entity.setLocation(path);
+                    entity.setLastUsedOn(LocalDate.now());
+                    return repository.save(entity);
+        }).map(SOS::getId))
+        .onErrorResume(err-> Mono.error(new IOException()));
     }
 
     private Mono<String> generateId() {
@@ -87,11 +74,11 @@ public class SOSServiceImpl implements SOSService{
     }
 
     @Override
-    public Mono<Resource> fetch(String assetId) throws IOException {
+    public Mono<Resource> fetch(String assetId) {
         return repository.findById(assetId)
             .switchIfEmpty(Mono.error(new SOSException("SERVICE.NOT_FOUND", HttpStatus.NOT_FOUND)))
             .map(entity-> {
-                String fullFilePath =  environment.getProperty("storage.path") + entity.getFileName();
+                String fullFilePath = entity.getLocation();
                 Path path = Path.of(fullFilePath);
                 
                 Resource file = null;
@@ -102,7 +89,7 @@ public class SOSServiceImpl implements SOSService{
                     throw new RuntimeException(e);
                 }
                 if (file.exists() || file.isReadable())
-                    return Mono.just(file);
+                    return file;
 		        else
 			        throw new SOSException("SERVICE.FILE_LOST", HttpStatus.NOT_FOUND);
         });
